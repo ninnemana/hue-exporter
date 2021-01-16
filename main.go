@@ -40,7 +40,7 @@ func main() {
 		promPort = &defaultPort
 	}
 
-	flush, err := initTracer("godns")
+	flush, err := initTracer("hue")
 	if err != nil {
 		logger.Fatal("failed to start tracer", zap.Error(err))
 	}
