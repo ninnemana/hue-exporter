@@ -1,0 +1,97 @@
+version: "2"
+services:
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./docker/tempo-local.yaml:/etc/tempo.yaml
+    ports:
+      - "14268:14268"  # jaeger ingest
+      - "6831:6831"  # jaeger agent
+      - "3100"   # tempo
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
+
+  tempo-query:
+    image: grafana/tempo-query:latest
+    command: ["--grpc-storage-plugin.configuration-file=/etc/tempo-query.yaml"]
+    volumes:
+      - ./docker/tempo-query.yaml:/etc/tempo-query.yaml
+    ports:
+      - "16686:16686"  # jaeger-ui
+    depends_on:
+      - tempo
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
+
+  hue-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /hue-exporter -metric-port 2222
+    environment:
+      - JAEGER_ENDPOINT=http://tempo:14268/api/traces
+    env_file:
+      - ./.env
+    ports:
+      - "2222:2222"
+    depends_on:
+      - tempo
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./docker/prometheus.yaml:/etc/prometheus.yaml
+    entrypoint:
+      - /bin/prometheus
+      - --config.file=/etc/prometheus.yaml
+    ports:
+      - "9090:9090"
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
+
+  grafana:
+    image: grafana/grafana:7.3.5
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./docker/grafana:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+      - tempo-query
+      - loki
+    ports:
+      - "3000:3000"
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
+
+  loki:
+    image: grafana/loki:latest
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3200:3200"                                   # loki needs to be exposed so it receives logs
+    volumes:
+      - ./docker/loki.yaml:/etc/loki/local-config.yaml
+    environment:
+      - JAEGER_AGENT_HOST=tempo
+      - JAEGER_ENDPOINT=http://tempo:14268/api/traces # send traces to Tempo
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3200/api/prom/push'
