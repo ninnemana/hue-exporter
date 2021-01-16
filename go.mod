@@ -6,7 +6,6 @@ require (
 	github.com/amimof/huego v1.1.0
 	github.com/ninnemana/godns v0.0.0-20210108225422-08a82241641d
 	github.com/prometheus/client_golang v1.7.1
-	go.opencensus.io v0.22.4
 	go.opentelemetry.io/otel v0.15.0
 	go.opentelemetry.io/otel/exporters/metric/prometheus v0.15.0
 	go.opentelemetry.io/otel/exporters/trace/jaeger v0.15.0
