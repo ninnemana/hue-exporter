@@ -27,8 +27,6 @@ type HueConfig struct {
 	Username string
 }
 
-type job func(context.Context) func() error
-
 type Gatherer struct {
 	log      *log.Contextual
 	exporter *prometheus.Exporter
