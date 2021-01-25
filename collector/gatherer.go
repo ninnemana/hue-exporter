@@ -196,12 +196,17 @@ func (l *lights) Collect(ctx context.Context) func() error {
 
 func lightObserver(lights []huego.Light) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
+		if len(lights) == 0 {
+			res.Observe(0)
+
+			return
+		}
+
 		for _, l := range lights {
 			res.Observe(
 				1,
 				label.Bool("on", l.State.On),
 				label.Int("id", l.ID),
-				label.Uint("bri", uint(l.State.Bri)),
 			)
 		}
 	}
@@ -209,6 +214,12 @@ func lightObserver(lights []huego.Light) metric.Int64ObserverFunc {
 
 func lightBrightnessObserver(lights []huego.Light) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
+		if len(lights) == 0 {
+			res.Observe(0)
+
+			return
+		}
+
 		for _, l := range lights {
 			res.Observe(
 				int64(l.State.Bri),
@@ -221,6 +232,15 @@ func lightBrightnessObserver(lights []huego.Light) metric.Int64ObserverFunc {
 
 func newLightObserver(v *huego.NewLight) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
+		if len(v.Lights) == 0 {
+			res.Observe(
+				0,
+				label.String("lastScan", v.LastScan),
+			)
+
+			return
+		}
+
 		for _, l := range v.Lights {
 			res.Observe(
 				1,
@@ -269,6 +289,12 @@ func (g *groups) Collect(ctx context.Context) func() error {
 
 func groupObserver(groups []huego.Group) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
+		if len(groups) == 0 {
+			res.Observe(0)
+
+			return
+		}
+
 		for _, g := range groups {
 			res.Observe(
 				1,
@@ -316,6 +342,12 @@ func (s *sensors) Collect(ctx context.Context) func() error {
 
 func sensorObserver(sensors []huego.Sensor) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
+		if len(sensors) == 0 {
+			res.Observe(0)
+
+			return
+		}
+
 		for _, s := range sensors {
 			res.Observe(
 				1,
