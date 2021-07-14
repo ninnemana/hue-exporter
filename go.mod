@@ -1,6 +1,6 @@
 module github.com/ninnemana/hue-exporter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/amimof/huego v1.1.0
