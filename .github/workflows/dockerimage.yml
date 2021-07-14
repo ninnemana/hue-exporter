@@ -16,7 +16,7 @@ jobs:
       uses: golangci/golangci-lint-action@v2
       with:
         version: v1.29
-    
+
     - name: Setup go
       uses: actions/setup-go@v1
       with:
@@ -25,7 +25,7 @@ jobs:
     - name: Get dependencies
       run: |
         go get -v -t -d ./...
-    
+
     - run: go test ./...
 
   publish:
@@ -36,7 +36,7 @@ jobs:
       DOCKER_REGISTRY: gcr.io/ninneman-org
       DOCKER_IMAGE: hue-exporter
       DOCKER_FILE: Dockerfile
-      DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm/v7
+      DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm/v7,linux/arm/v8,linux/arm64/v8
     steps:
     - uses: actions/checkout@v1
 
