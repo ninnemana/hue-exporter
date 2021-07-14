@@ -36,7 +36,7 @@ jobs:
       DOCKER_REGISTRY: gcr.io/ninneman-org
       DOCKER_IMAGE: hue-exporter
       DOCKER_FILE: Dockerfile
-      DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm/v7,linux/arm/v8,linux/arm64/v8
+      DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm/v7,linux/arm64/v8
     steps:
     - uses: actions/checkout@v1
 
