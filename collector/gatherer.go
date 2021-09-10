@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/amimof/huego"
@@ -138,6 +139,18 @@ func (l *lights) Collect(ctx context.Context) func() error {
 	return func() error {
 		defer span.End()
 
+		hueGroups, err := l.hue.GetGroupsContext(ctx)
+		if err != nil {
+			l.log.Error(ctx, "failed to fetch groups", zap.Error(err))
+
+			return err
+		}
+
+		var groups lightGroups
+		for _, group := range hueGroups {
+			groups = append(groups, lightGroup{group})
+		}
+
 		lights, err := l.hue.GetLightsContext(ctx)
 		if err != nil {
 			l.log.Error(ctx, "failed to fetch lights", zap.Error(err))
@@ -148,7 +161,7 @@ func (l *lights) Collect(ctx context.Context) func() error {
 		l.log.Info(ctx, "collecting lights", zap.Int("count", len(lights)))
 		if _, err := l.meter.NewInt64ValueObserver(
 			"light",
-			lightObserver(lights),
+			lightObserver(lights, groups),
 			metric.WithDescription("Number of lights in the current state. Includes brightness, identifer, and on state."),
 			metric.WithUnit(unit.Dimensionless),
 		); err != nil {
@@ -160,7 +173,7 @@ func (l *lights) Collect(ctx context.Context) func() error {
 		l.log.Info(ctx, "collecting light brightness", zap.Int("count", len(lights)))
 		if _, err := l.meter.NewInt64ValueObserver(
 			"light_brightness",
-			lightBrightnessObserver(lights),
+			lightBrightnessObserver(lights, groups),
 			metric.WithDescription("Brightness of lights."),
 			metric.WithUnit(unit.Dimensionless),
 		); err != nil {
@@ -194,7 +207,33 @@ func (l *lights) Collect(ctx context.Context) func() error {
 	}
 }
 
-func lightObserver(lights []huego.Light) metric.Int64ObserverFunc {
+type lightGroups []lightGroup
+
+func (lgs lightGroups) lightExists(id int) *lightGroup {
+	for _, g := range lgs {
+		if g.lightExists(id) {
+			return &g
+		}
+	}
+
+	return nil
+}
+
+type lightGroup struct {
+	huego.Group
+}
+
+func (lg *lightGroup) lightExists(id int) bool {
+	for _, light := range lg.Lights {
+		if light == strconv.Itoa(id) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func lightObserver(lights []huego.Light, groups lightGroups) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
 		if len(lights) == 0 {
 			res.Observe(0)
@@ -203,16 +242,24 @@ func lightObserver(lights []huego.Light) metric.Int64ObserverFunc {
 		}
 
 		for _, l := range lights {
+			var assignedGroup string
+
+			// check if this light has been assigned a group
+			if group := groups.lightExists(l.ID); group != nil {
+				assignedGroup = group.Name
+			}
+
 			res.Observe(
 				1,
 				label.Bool("on", l.State.On),
 				label.Int("id", l.ID),
+				label.String("group", assignedGroup),
 			)
 		}
 	}
 }
 
-func lightBrightnessObserver(lights []huego.Light) metric.Int64ObserverFunc {
+func lightBrightnessObserver(lights []huego.Light, groups lightGroups) metric.Int64ObserverFunc {
 	return func(ctx context.Context, res metric.Int64ObserverResult) {
 		if len(lights) == 0 {
 			res.Observe(0)
@@ -221,10 +268,17 @@ func lightBrightnessObserver(lights []huego.Light) metric.Int64ObserverFunc {
 		}
 
 		for _, l := range lights {
+			var assignedGroup string
+
+			// check if this light has been assigned a group
+			if group := groups.lightExists(l.ID); group != nil {
+				assignedGroup = group.Name
+			}
 			res.Observe(
 				int64(l.State.Bri),
 				label.Bool("on", l.State.On),
 				label.Int("id", l.ID),
+				label.String("group", assignedGroup),
 			)
 		}
 	}
@@ -301,6 +355,7 @@ func groupObserver(groups []huego.Group) metric.Int64ObserverFunc {
 				label.Bool("on", g.State.On),
 				label.Int("id", g.ID),
 				label.Uint("bri", uint(g.State.Bri)),
+				label.String("name", g.Name),
 			)
 		}
 	}
