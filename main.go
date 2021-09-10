@@ -71,6 +71,7 @@ func main() {
 
 	go func() {
 		for {
+			logger.Info("initializing prometheus exporter", zap.String("port", *promPort))
 			if err := http.ListenAndServe(":"+*promPort, coll); err != nil {
 				logger.Error("fell out of serving HTTP traffic", zap.Error(err))
 			}
