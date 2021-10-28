@@ -4,13 +4,13 @@ import (
 	"time"
 
 	"github.com/amimof/huego"
-	log "github.com/ninnemana/godns/log"
-	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"github.com/ninnemana/tracelog"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type Option func(*Gatherer)
 
-func WithLogger(l *log.Contextual) Option {
+func WithLogger(l *tracelog.TraceLogger) Option {
 	return func(c *Gatherer) {
 		c.log = l
 	}
@@ -22,10 +22,10 @@ func WithTicker(d time.Duration) Option {
 	}
 }
 
-func WithExporter(ex *prometheus.Exporter) Option {
+func WithExporter(ex metric.MeterProvider) Option {
 	return func(c *Gatherer) {
-		c.meter = ex.MeterProvider().Meter("hue")
-		c.exporter = ex
+		c.meter = ex.Meter("hue")
+		// c.exporter = ex
 	}
 }
 
